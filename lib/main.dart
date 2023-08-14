@@ -101,17 +101,19 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
         // 投稿のロード状態に応じて表示を変更
         data: (asyncTodos) => Consumer(
           builder: (ctx, watch, child) {
+            final posts = ref.watch(postSearchProvider.notifier).state;
+
             //.notifierはインスタンへのアクセス許可・.stateはプロ杯だの現在の状態を取得
             //ref.watchはプロバイダーを監視するやつ(値も得るよ)
             // sync oldLength with post.length to make sure ListView has newest
             // data, so loadMore will work correctly
             //?.の部分はNullにならないので.だけにする
             //posts.length ?? 0;は左側がNullの場合に備えているが、Nullになることはないので、「0」は削除。
-            oldLength = asyncTodos.posts!.length;
+            oldLength = posts.length;
             // init data or error
             //（この部分わからんのでとりあえず誤魔化す）
             // ignore: unnecessary_null_comparison
-            if (asyncTodos.posts! == null) {
+            if (posts == null) {
               // error case
               if (asyncTodos.isLoading == false) {
                 return const Center(
@@ -130,12 +132,12 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   controller: _controller,
-                  itemCount: asyncTodos.posts!.length + 1, //リストに表示するデータの個数
+                  itemCount: posts.length + 1, //リストに表示するデータの個数
                   itemBuilder: (ctx, index) {
                     // 現在ビルドされているリストのアイテムの位置を示す番号らしい。
                     //ctxはcontextの略
                     // 最後の要素（プログレスバー、エラー、または最後の要素に到達した場合はDone!とする）
-                    if (index == asyncTodos.posts!.length) {
+                    if (index == posts.length) {
                       // さらにロードしてエラーが出た際に実行
                       if (asyncTodos.isLoadMoreError) {
                         return const Center(
@@ -157,12 +159,11 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                       children: [
                         ListTile(
                           title: Text(
-                            asyncTodos.posts![index].title,
+                            posts[index].title,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Text(asyncTodos.posts![index].body),
-                          trailing:
-                              Text(asyncTodos.posts![index].id.toString()),
+                          subtitle: Text(posts[index].body),
+                          trailing: Text(posts[index].id.toString()),
                         ),
                         const Divider(),
                       ],
