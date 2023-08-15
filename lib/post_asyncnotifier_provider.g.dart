@@ -7,7 +7,7 @@ part of 'post_asyncnotifier_provider.dart';
 // **************************************************************************
 
 String _$postAsyncnotifierProviderHash() =>
-    r'a5ac3d53af13183e4901ca8455f05c8091a0cc7b';
+    r'ce98ea72710e20faf1540b2e84d2362099538757';
 
 /// See also [PostAsyncnotifierProvider].
 @ProviderFor(PostAsyncnotifierProvider)
