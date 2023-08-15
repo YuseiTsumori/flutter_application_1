@@ -6,26 +6,71 @@ import 'post.dart';
 //StateProvider=フィルタの条件 / シンプルなステートオブジェクト
 //KeyProvideというProviderを作成（初期化）
 //俺がいつも使うProviderはサービスクラス / 算出プロパティ（リストのフィルタなど）
-final keyProvider = StateProvider<String>((ref) {
+
+/*final keyProvider = StateProvider<String>((ref) {
   return '';
 });
+*/
+
+final keyProvider = NotifierProvider<Keyprovider, String>(
+    Keyprovider.new); //NotifierProviderを継承したKeyproviderクラスを作成している
+
+class Keyprovider extends Notifier<String> {
+  @override
+  String build() {
+    return '';
+  }
+}
 
 //postSearchProviderというプProviderを作成(初期化)
 //ref.watch=プロバイダの値を取得した上で、その変化を監視する。値が変化すると、その値に依存するウィジェットやプロバイダの更新が行われる。
 //↑可能な限りref.watchを使うことらしい
 //他にもreadとか色々あるのでドキュメント読むこと
-final postSearchProvider = StateProvider<List<Post>>((ref) {
-  final postState = ref.watch(
-      postAsyncnotifierProviderProvider); //postAsyncnotifierProviderProviderを監視
-  final key = ref.watch(keyProvider); //keyProvider(入力された文字)を監視
+//じゃあこれはどうやって修正するのか？
 
-//なんで？を消したら動くのか？=postsの戻り値がList<post>であり、Nullを返すことを許可されていないのでエラーになる。
-  return postState.value!.posts! //現在の投稿リストを取得[!]はNull出ないことを明示
-      //ここで入力された文字列[key]に応じてbodyとtitleに含んでいるもののみに絞り込む
+final postSearchProvider =
+    NotifierProvider<PostSearchProvider, List<Post>>(PostSearchProvider.new);
+
+class PostSearchProvider extends Notifier<List<Post>> {
+  //とりま初期値を作る
+  @override
+  List<Post> build() {
+    return [
+      //ここになんかを書くはず
+    ];
+  }
+
+  List search() {
+    final postState = ref.watch(postAsyncnotifierProviderProvider);
+    final key = ref.watch(keyProvider); // keyがnullの場合、デフォルト値として空文字を使用
+    // nullチェックを追加。postStateやpostState.valueがnullの場合、空のリストを返す
+    if (postState.value?.posts == null) {
+      return [];
+    }
+    return postState.value!.posts!
+        .where((element) =>
+            (element.body.contains(key)) || (element.title.contains(key)))
+        .toList();
+  }
+}
+/*
+final postSearchProvider = StateProvider<List<Post>>((ref) {
+  final postState = ref.watch(postAsyncnotifierProviderProvider);
+  final key = ref.watch(keyProvider); // keyがnullの場合、デフォルト値として空文字を使用
+
+  // nullチェックを追加。postStateやpostState.valueがnullの場合、空のリストを返す
+  if (postState.value?.posts == null) {
+    return [];
+  }
+
+  return postState.value!.posts!
       .where((element) =>
-          element.body.contains(key) || element.title.contains(key))
-      .toList(); //新しいリストとして返す
+          (element.body.contains(key)) || (element.title.contains(key)))
+      .toList();
+
 });
+*/
+
 //プロバイダをWidgetで使うのでProviderScopedで囲む
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -101,19 +146,20 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
         // 投稿のロード状態に応じて表示を変更
         data: (asyncTodos) => Consumer(
           builder: (ctx, watch, child) {
-            final posts = ref.watch(postSearchProvider.notifier).state;
-
             //.notifierはインスタンへのアクセス許可・.stateはプロ杯だの現在の状態を取得
             //ref.watchはプロバイダーを監視するやつ(値も得るよ)
             // sync oldLength with post.length to make sure ListView has newest
             // data, so loadMore will work correctly
             //?.の部分はNullにならないので.だけにする
-            //posts.length ?? 0;は左側がNullの場合に備えているが、Nullになることはないので、「0」は削除。
-            oldLength = posts.length;
+            //asyncTodos.posts!.length ?? 0;は左側がNullの場合に備えているが、Nullになることはないので、「0」は削除。
+            final posts = ref.watch(postSearchProvider.notifier).state;
+
+            oldLength = asyncTodos.posts!.length;
+
             // init data or error
             //（この部分わからんのでとりあえず誤魔化す）
             // ignore: unnecessary_null_comparison
-            if (posts == null) {
+            if (asyncTodos.posts! == null) {
               // error case
               if (asyncTodos.isLoading == false) {
                 return const Center(
@@ -124,20 +170,24 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
             }
             //上からひっぱた時に更新させるやつ
             return RefreshIndicator(
-              onRefresh: () {
-                return ref
-                    .read(postAsyncnotifierProviderProvider.notifier)
-                    .refresh();
+              onRefresh: () async {
+                print('リフレッシュ中');
+                try {
+                  ref.invalidate(postAsyncnotifierProviderProvider);
+                  print('リフレッシュ完了');
+                } catch (error, stack) {
+                  print('リフレッシュ失敗$error$stack');
+                }
               },
               child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   controller: _controller,
-                  itemCount: posts.length + 1, //リストに表示するデータの個数
+                  itemCount: asyncTodos.posts!.length + 1, //リストに表示するデータの個数
                   itemBuilder: (ctx, index) {
                     // 現在ビルドされているリストのアイテムの位置を示す番号らしい。
                     //ctxはcontextの略
                     // 最後の要素（プログレスバー、エラー、または最後の要素に到達した場合はDone!とする）
-                    if (index == posts.length) {
+                    if (index == asyncTodos.posts!.length) {
                       // さらにロードしてエラーが出た際に実行
                       if (asyncTodos.isLoadMoreError) {
                         return const Center(
@@ -159,11 +209,12 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                       children: [
                         ListTile(
                           title: Text(
-                            posts[index].title,
+                            asyncTodos.posts![index].title,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Text(posts[index].body),
-                          trailing: Text(posts[index].id.toString()),
+                          subtitle: Text(asyncTodos.posts![index].body),
+                          trailing:
+                              Text(asyncTodos.posts![index].id.toString()),
                         ),
                         const Divider(),
                       ],

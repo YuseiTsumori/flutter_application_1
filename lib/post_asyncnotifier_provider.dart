@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 import 'http_client.dart';
 import 'post.dart';
 import 'post_state.dart';
@@ -10,13 +8,13 @@ part 'post_asyncnotifier_provider.g.dart'; // このファイルはコード生�
 //これはRverpodを使用して非同期に投稿データを取得するロジックを実装している。
 @Riverpod(
     keepAlive:
-        true) // Riverpodアノテーションを使用し、ProviderのkeepAliveオプションを有効化。Trueにすると使わないプロパイダを破棄する
+        true) // Riverpodアノテーションを使用し、ProviderのkeepAliveオプションを有効化。Trueにすると使わないプロパイダを破棄しない
 // コードジェネレーションを利用するための設定
 
 class PostAsyncnotifierProvider extends _$PostAsyncnotifierProvider {
   @override
   // 初期状態を構築するメソッド
-  FutureOr<PostState> build() async {
+  Future<PostState> build() async {
     final posts = await _initPosts(1); // 1ページ目の投稿を非同期に取得
     return PostState(posts: posts); // 初期状態を返す
   }
